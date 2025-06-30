@@ -140,6 +140,6 @@ public class TransferResourceTest {
                 .when().post("/transfers")
                 .then()
                 .statusCode(400)
-                .body("message", is("Transfer amount must be positive."));
+                .body("violations[0].message", is("Amount must be positive"));
     }
 }

@@ -18,33 +18,22 @@ public class AccountService {
     }
 
     public Optional<Account> getAccountByNumber(String accountNumber) {
-        return Account.find("accountNumber", accountNumber).firstResultOptional();
+        return Account.find("from Account where accountNumber = ?1", accountNumber).firstResultOptional();
     }
 
     public BigDecimal getBalance(String accountNumber) {
-        Account account = getAccountByNumber(accountNumber)
-                .orElseThrow(() -> new AccountNotFoundException(accountNumber));
-        return account.balance;
+        return findAccountByNumberOrThrow(accountNumber).balance;
     }
 
     @Transactional
     public Account deposit(String accountNumber, BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Deposit amount must be positive.");
-        }
-
-        Account account = getAccountByNumber(accountNumber)
-                .orElseThrow(() -> new AccountNotFoundException(accountNumber));
-
+        Account account = findAccountByNumberOrThrow(accountNumber);
         account.balance = account.balance.add(amount);
         return account;
     }
 
     @Transactional
     public void transfer(String fromAccountNumber, String toAccountNumber, BigDecimal amount) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Transfer amount must be positive.");
-        }
         if (fromAccountNumber.equals(toAccountNumber)) {
             throw new IllegalArgumentException("Cannot transfer money to the same account.");
         }
@@ -69,5 +58,10 @@ public class AccountService {
         if (creditRows == 0) {
             throw new AccountNotFoundException(toAccountNumber);
         }
+    }
+
+    private Account findAccountByNumberOrThrow(String accountNumber) {
+        return Account.<Account>find("from Account where accountNumber = ?1", accountNumber).firstResultOptional()
+                .orElseThrow(() -> new AccountNotFoundException(accountNumber));
     }
 }

@@ -3,11 +3,11 @@ package com.bank.api;
 import com.bank.api.dto.BalanceResponse;
 import com.bank.api.dto.CreateAccountRequest;
 import com.bank.api.dto.DepositRequest;
-import com.bank.exception.AccountNotFoundExceptionMapper;
 import com.bank.model.Account;
 import com.bank.service.AccountService;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -34,10 +34,7 @@ public class AccountResource {
     }
 
     @POST
-    public Response createAccount(CreateAccountRequest request, @Context UriInfo uriInfo) {
-        if (request.firstName() == null || request.lastName() == null || request.firstName().isBlank() || request.lastName().isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST).entity("First name and last name must be provided.").build();
-        }
+    public Response createAccount(@Valid CreateAccountRequest request, @Context UriInfo uriInfo) {
         Account newAccount = accountService.createAccount(request.firstName(), request.lastName());
 
         URI createdUri = uriInfo.getAbsolutePathBuilder().path(newAccount.accountNumber).build();
@@ -47,12 +44,8 @@ public class AccountResource {
     @POST
     @Path("/{accountNumber}/deposit")
     @Transactional
-    public Response deposit(@PathParam("accountNumber") String accountNumber, DepositRequest request) {
-        try {
-            Account updatedAccount = accountService.deposit(accountNumber, request.amount());
-            return Response.ok(updatedAccount).build();
-        } catch (IllegalArgumentException e) {
-            return Response.status(Response.Status.BAD_REQUEST).entity(new AccountNotFoundExceptionMapper.ErrorMessage(e.getMessage())).build();
-        }
+    public Response deposit(@PathParam("accountNumber") String accountNumber, @Valid DepositRequest request) {
+        Account updatedAccount = accountService.deposit(accountNumber, request.amount());
+        return Response.ok(updatedAccount).build();
     }
 }

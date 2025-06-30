@@ -1,6 +1,7 @@
--- This file allow to write SQL commands that will be emitted in test and dev.
--- The commands are commented as their support depends of the database
--- insert into myentity (id, field) values(1, 'field-1');
--- insert into myentity (id, field) values(2, 'field-2');
--- insert into myentity (id, field) values(3, 'field-3');
--- alter sequence myentity_seq restart with 4;
+DELETE FROM Account;
+
+-- Create two accounts with known account numbers and balances.
+INSERT INTO Account(id, accountNumber, balance, firstName, lastName) VALUES (1, 'account-1', 100.00, 'Alice', 'Sender');
+INSERT INTO Account(id, accountNumber, balance, firstName, lastName) VALUES (2, 'account-2', 50.00, 'Bob', 'Receiver');
+
+ALTER SEQUENCE Account_SEQ RESTART WITH 3;
