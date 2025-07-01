@@ -23,7 +23,7 @@ The application can be run locally using Quarkus's development mode, which provi
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/MadsSoeborg/bank-account-challenge.git
-    cd account-system
+    cd bank-account-challenge
     ```
 
 2.  **Run the application:**
