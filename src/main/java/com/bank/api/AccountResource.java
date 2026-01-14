@@ -1,5 +1,6 @@
 package com.bank.api;
 
+import com.bank.api.dto.AccountResponse;
 import com.bank.api.dto.BalanceResponse;
 import com.bank.api.dto.CreateAccountRequest;
 import com.bank.api.dto.DepositRequest;
@@ -37,8 +38,10 @@ public class AccountResource {
     public Response createAccount(@Valid CreateAccountRequest request, @Context UriInfo uriInfo) {
         Account newAccount = accountService.createAccount(request.firstName(), request.lastName());
 
+        AccountResponse response = mapToResponse(newAccount);
+
         URI createdUri = uriInfo.getAbsolutePathBuilder().path(newAccount.accountNumber).build();
-        return Response.created(createdUri).entity(newAccount).build();
+        return Response.created(createdUri).entity(response).build();
     }
 
     @POST
@@ -46,6 +49,17 @@ public class AccountResource {
     @Transactional
     public Response deposit(@PathParam("accountNumber") String accountNumber, @Valid DepositRequest request) {
         Account updatedAccount = accountService.deposit(accountNumber, request.amount());
-        return Response.ok(updatedAccount).build();
+
+        AccountResponse response = mapToResponse(updatedAccount);
+
+        return Response.ok(response).build();
+    }
+
+    private AccountResponse mapToResponse(Account account) {
+        return new AccountResponse(
+                account.accountNumber,
+                account.firstName,
+                account.lastName,
+                account.balance);
     }
 }

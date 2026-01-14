@@ -12,10 +12,9 @@ public class ValidationExceptionMapper implements ExceptionMapper<RuntimeExcepti
 
     @Override
     public Response toResponse(RuntimeException exception) {
-        if (exception instanceof IllegalArgumentException || exception instanceof IllegalStateException) {
+        if (exception instanceof IllegalArgumentException || exception instanceof InsufficientFundsException) {
 
-            LOG.debugf("Mapping validation exception to 400 Bad Request: %s", exception.getMessage());
-            LOG.infof("ValidationExceptionMapper is handling a %s: %s", exception.getClass().getSimpleName(), exception.getMessage());
+            LOG.debugf("Mapping business exception to 400 Bad Request: %s", exception.getMessage());
 
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorMessage(exception.getMessage()))
@@ -25,5 +24,6 @@ public class ValidationExceptionMapper implements ExceptionMapper<RuntimeExcepti
         return null;
     }
 
-    public record ErrorMessage(String message) {}
+    public record ErrorMessage(String message) {
+    }
 }
