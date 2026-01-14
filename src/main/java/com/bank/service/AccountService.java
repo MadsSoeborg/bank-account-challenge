@@ -1,5 +1,6 @@
 package com.bank.service;
 
+import com.bank.event.TransactionEvents.*;
 import com.bank.exception.AccountNotFoundException;
 import com.bank.exception.InsufficientFundsException;
 import com.bank.model.Account;
@@ -7,8 +8,10 @@ import com.bank.model.TransactionEntry;
 import com.bank.model.TransactionType;
 
 import io.quarkus.panache.common.Sort;
+import jakarta.enterprise.event.Event;
 import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,6 +19,12 @@ import java.util.Optional;
 
 @ApplicationScoped
 public class AccountService {
+
+    @Inject
+    Event<DepositEvent> depositEvent;
+
+    @Inject
+    Event<WithdrawEvent> withdrawEvent;
 
     @Transactional
     public Account createAccount(String firstName, String lastName) {
@@ -49,6 +58,8 @@ public class AccountService {
 
         TransactionEntry.create(accountNumber, amount, TransactionType.DEPOSIT, null).persist();
 
+        depositEvent.fire(new DepositEvent(accountNumber, amount));
+
         return findAccountByNumberOrThrow(accountNumber);
     }
 
@@ -64,6 +75,9 @@ public class AccountService {
         }
 
         TransactionEntry.create(accountNumber, amount.negate(), TransactionType.WITHDRAWAL, null).persist();
+
+        withdrawEvent.fire(new WithdrawEvent(accountNumber, amount));
+
         return findAccountByNumberOrThrow(accountNumber);
     }
 
@@ -96,6 +110,7 @@ public class AccountService {
         }
 
         TransactionEntry.create(toAccountNumber, amount, TransactionType.TRANSFER_IN, fromAccountNumber).persist();
+
     }
 
     private Account findAccountByNumberOrThrow(String accountNumber) {
