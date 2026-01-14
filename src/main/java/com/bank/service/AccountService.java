@@ -7,6 +7,7 @@ import com.bank.model.TransactionEntry;
 import com.bank.model.TransactionType;
 
 import io.quarkus.panache.common.Sort;
+import io.quarkus.panache.common.Page;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
@@ -31,10 +32,11 @@ public class AccountService {
         return findAccountByNumberOrThrow(accountNumber).balance;
     }
 
-    public List<TransactionEntry> getTransactionHistory(String accountNumber) {
+    public List<TransactionEntry> getTransactionHistory(String accountNumber, int pageIndex, int pageSize) {
         findAccountByNumberOrThrow(accountNumber);
 
-        return TransactionEntry.list("accountNumber", Sort.descending("timestamp"), accountNumber);
+        return TransactionEntry.find("accountNumber", Sort.descending("timestamp"), accountNumber)
+                .page(Page.of(pageIndex, pageSize)).list();
     }
 
     @Transactional
@@ -45,6 +47,21 @@ public class AccountService {
         TransactionEntry.create(accountNumber, amount, TransactionType.DEPOSIT, null).persist();
 
         return account;
+    }
+
+    @Transactional
+    public Account withdraw(String accountNumber, BigDecimal amount) {
+        long rowsUpdated = Account.update(
+                "balance = balance - ?1 WHERE accountNumber = ?2 AND balance >= ?1", amount, accountNumber);
+
+        if (rowsUpdated == 0) {
+            getAccountByNumber(accountNumber).orElseThrow(() -> new AccountNotFoundException(accountNumber));
+
+            throw new InsufficientFundsException("Insufficient funds for withdrawal");
+        }
+
+        TransactionEntry.create(accountNumber, amount.negate(), TransactionType.WITHDRAWAL, null).persist();
+        return findAccountByNumberOrThrow(accountNumber);
     }
 
     @Transactional

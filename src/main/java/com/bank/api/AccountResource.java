@@ -4,6 +4,8 @@ import com.bank.api.dto.AccountResponse;
 import com.bank.api.dto.BalanceResponse;
 import com.bank.api.dto.CreateAccountRequest;
 import com.bank.api.dto.DepositRequest;
+import com.bank.api.dto.TransactionResponse;
+import com.bank.api.dto.WithdrawRequest;
 import com.bank.model.Account;
 import com.bank.service.AccountService;
 import jakarta.inject.Inject;
@@ -36,10 +38,13 @@ public class AccountResource {
 
     @GET
     @Path("/{accountNumber}/transactions")
-    public Response getTransactions(@PathParam("accountNumber") String accountNumber) {
-        var transactions = accountService.getTransactionHistory(accountNumber)
+    public Response getTransactions(
+            @PathParam("accountNumber") String accountNumber,
+            @QueryParam("page") @DefaultValue("0") int pageIndex,
+            @QueryParam("size") @DefaultValue("20") int pageSize) {
+        var transactions = accountService.getTransactionHistory(accountNumber, pageIndex, pageSize)
                 .stream()
-                .map(t -> new com.bank.api.dto.TransactionResponse(
+                .map(t -> new TransactionResponse(
                         t.accountNumber,
                         t.amount,
                         t.type,
@@ -65,6 +70,18 @@ public class AccountResource {
     @Transactional
     public Response deposit(@PathParam("accountNumber") String accountNumber, @Valid DepositRequest request) {
         Account updatedAccount = accountService.deposit(accountNumber, request.amount());
+
+        AccountResponse response = mapToResponse(updatedAccount);
+
+        return Response.ok(response).build();
+    }
+
+    @POST
+    @Path("/{accountNumber}/withdraw")
+    @Transactional
+    public Response withdraw(@PathParam("accountNumber") String accountNumber,
+            @Valid WithdrawRequest request) {
+        Account updatedAccount = accountService.withdraw(accountNumber, request.amount());
 
         AccountResponse response = mapToResponse(updatedAccount);
 
