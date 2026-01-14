@@ -41,12 +41,15 @@ public class AccountService {
 
     @Transactional
     public Account deposit(String accountNumber, BigDecimal amount) {
-        Account account = findAccountByNumberOrThrow(accountNumber);
-        account.balance = account.balance.add(amount);
+        int rowsUpdated = Account.update("balance = balance + ?1 WHERE accountNumber = ?2", amount, accountNumber);
+
+        if (rowsUpdated == 0) {
+            throw new AccountNotFoundException(accountNumber);
+        }
 
         TransactionEntry.create(accountNumber, amount, TransactionType.DEPOSIT, null).persist();
 
-        return account;
+        return findAccountByNumberOrThrow(accountNumber);
     }
 
     @Transactional
