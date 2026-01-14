@@ -34,6 +34,22 @@ public class AccountResource {
         return Response.ok(response).build();
     }
 
+    @GET
+    @Path("/{accountNumber}/transactions")
+    public Response getTransactions(@PathParam("accountNumber") String accountNumber) {
+        var transactions = accountService.getTransactionHistory(accountNumber)
+                .stream()
+                .map(t -> new com.bank.api.dto.TransactionResponse(
+                        t.accountNumber,
+                        t.amount,
+                        t.type,
+                        t.timestamp,
+                        t.relatedAccountNumber))
+                .toList();
+
+        return Response.ok(transactions).build();
+    }
+
     @POST
     public Response createAccount(@Valid CreateAccountRequest request, @Context UriInfo uriInfo) {
         Account newAccount = accountService.createAccount(request.firstName(), request.lastName());

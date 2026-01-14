@@ -3,9 +3,14 @@ package com.bank.service;
 import com.bank.exception.AccountNotFoundException;
 import com.bank.exception.InsufficientFundsException;
 import com.bank.model.Account;
+import com.bank.model.TransactionEntry;
+import com.bank.model.TransactionType;
+
+import io.quarkus.panache.common.Sort;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
@@ -26,10 +31,19 @@ public class AccountService {
         return findAccountByNumberOrThrow(accountNumber).balance;
     }
 
+    public List<TransactionEntry> getTransactionHistory(String accountNumber) {
+        findAccountByNumberOrThrow(accountNumber);
+
+        return TransactionEntry.list("accountNumber", Sort.descending("timestamp"), accountNumber);
+    }
+
     @Transactional
     public Account deposit(String accountNumber, BigDecimal amount) {
         Account account = findAccountByNumberOrThrow(accountNumber);
         account.balance = account.balance.add(amount);
+
+        TransactionEntry.create(accountNumber, amount, TransactionType.DEPOSIT, null).persist();
+
         return account;
     }
 
@@ -50,6 +64,9 @@ public class AccountService {
             throw new InsufficientFundsException("Insufficient funds in account " + fromAccountNumber);
         }
 
+        TransactionEntry.create(fromAccountNumber, amount.negate(), TransactionType.TRANSFER_OUT, toAccountNumber)
+                .persist();
+
         long creditRows = Account.update(
                 "balance = balance + ?1 WHERE accountNumber = ?2",
                 amount, toAccountNumber);
@@ -57,6 +74,8 @@ public class AccountService {
         if (creditRows == 0) {
             throw new AccountNotFoundException(toAccountNumber);
         }
+
+        TransactionEntry.create(toAccountNumber, amount, TransactionType.TRANSFER_IN, fromAccountNumber).persist();
     }
 
     private Account findAccountByNumberOrThrow(String accountNumber) {
