@@ -8,11 +8,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "accounts", indexes = {
-        @Index(name = "idx_acc_num", columnList = "accountNumber", unique = true)
+        @Index(name = "idx_acc_num", columnList = "account_number", unique = true)
 })
 public class Account extends PanacheEntity {
 
-    @Column(nullable = false, unique = true, updatable = false)
+    @Column(name = "account_number", nullable = false, unique = true, updatable = false)
     public String accountNumber;
 
     @Column(nullable = false, precision = 19, scale = 4)
@@ -21,17 +21,17 @@ public class Account extends PanacheEntity {
     @Version
     public long version;
 
-    @Column(nullable = false)
+    @Column(name = "first_name", nullable = false)
     public String firstName;
 
-    @Column(nullable = false)
+    @Column(name = "last_name", nullable = false)
     public String lastName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     public AccountStatus status = AccountStatus.ACTIVE;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     public Instant createdAt = Instant.now();
 
     public enum AccountStatus {
