@@ -2,6 +2,8 @@ package com.bank.api;
 
 import com.bank.api.dto.TransferRequest;
 import com.bank.model.Account;
+import com.bank.model.LedgerEntry;
+
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.config.JsonConfig;
@@ -34,6 +36,7 @@ public class TransferResourceTest {
     @BeforeEach
     @Transactional
     public void setupAccounts() {
+        LedgerEntry.deleteAll();
         Account.deleteAll();
 
         account1 = new Account("Sender", "One");

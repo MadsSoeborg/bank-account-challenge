@@ -31,102 +31,101 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
 @Tag(name = "Account Operations", description = "Create accounts, check balances, and view history")
 public class AccountResource {
 
-    @Inject
-    AccountService accountService;
+        @Inject
+        AccountService accountService;
 
-    @GET
-    @Path("/{accountNumber}/balance")
-    @Operation(summary = "Get account balance", description = "Retrieve the current balance for a specific account")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Balance retrieved successfully"),
-            @APIResponse(responseCode = "404", description = "Account not found")
-    })
-    public Response getBalance(@PathParam("accountNumber") String accountNumber) {
-        BigDecimal balance = accountService.getBalance(accountNumber);
-        BalanceResponse response = new BalanceResponse(accountNumber, balance);
-        return Response.ok(response).build();
-    }
+        @GET
+        @Path("/{accountNumber}/balance")
+        @Operation(summary = "Get account balance", description = "Retrieve the current balance for a specific account")
+        @APIResponses({
+                        @APIResponse(responseCode = "200", description = "Balance retrieved successfully"),
+                        @APIResponse(responseCode = "404", description = "Account not found")
+        })
+        public Response getBalance(@PathParam("accountNumber") String accountNumber) {
+                BigDecimal balance = accountService.getBalance(accountNumber);
+                BalanceResponse response = new BalanceResponse(accountNumber, balance);
+                return Response.ok(response).build();
+        }
 
-    @GET
-    @Path("/{accountNumber}/transactions")
-    @Operation(summary = "Get transaction history", description = "Retrieve paginated transaction history for a specific account")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Transactions retrieved successfully"),
-            @APIResponse(responseCode = "404", description = "Account not found")
-    })
-    public Response getTransactions(
-            @PathParam("accountNumber") String accountNumber,
-            @QueryParam("page") @DefaultValue("0") int pageIndex,
-            @QueryParam("size") @DefaultValue("20") int pageSize) {
-        var transactions = accountService.getTransactionHistory(accountNumber, pageIndex, pageSize)
-                .stream()
-                .map(t -> new TransactionResponse(
-                        t.accountNumber,
-                        t.amount,
-                        t.type,
-                        t.timestamp,
-                        t.relatedAccountNumber))
-                .toList();
+        @GET
+        @Path("/{accountNumber}/transactions")
+        public Response getTransactions(
+                        @PathParam("accountNumber") String accountNumber,
+                        @QueryParam("page") @DefaultValue("0") int pageIndex,
+                        @QueryParam("size") @DefaultValue("20") int pageSize) {
 
-        return Response.ok(transactions).build();
-    }
+                var entries = accountService.getTransactionHistory(accountNumber, pageIndex, pageSize);
 
-    @POST
-    @Operation(summary = "Create new account", description = "Create a new bank account with the provided customer information")
-    @APIResponses({
-            @APIResponse(responseCode = "201", description = "Account created successfully"),
-            @APIResponse(responseCode = "400", description = "Invalid request data")
-    })
-    public Response createAccount(@Valid CreateAccountRequest request, @Context UriInfo uriInfo) {
-        Account newAccount = accountService.createAccount(request.firstName(), request.lastName());
+                var responseList = entries
+                                .stream()
+                                .map(t -> new TransactionResponse(
+                                                t.account.accountNumber,
+                                                t.amount,
+                                                t.type,
+                                                java.time.LocalDateTime.ofInstant(t.timestamp,
+                                                                java.time.ZoneId.systemDefault()),
+                                                t.referenceInfo))
+                                .toList();
 
-        AccountResponse response = mapToResponse(newAccount);
+                return Response.ok(responseList).build();
+        }
 
-        URI createdUri = uriInfo.getAbsolutePathBuilder().path(newAccount.accountNumber).build();
-        return Response.created(createdUri).entity(response).build();
-    }
+        @POST
+        @Operation(summary = "Create new account", description = "Create a new bank account with the provided customer information")
+        @APIResponses({
+                        @APIResponse(responseCode = "201", description = "Account created successfully"),
+                        @APIResponse(responseCode = "400", description = "Invalid request data")
+        })
+        public Response createAccount(@Valid CreateAccountRequest request, @Context UriInfo uriInfo) {
+                Account newAccount = accountService.createAccount(request.firstName(), request.lastName());
 
-    @POST
-    @Path("/{accountNumber}/deposit")
-    @Transactional
-    @Operation(summary = "Deposit funds", description = "Deposit money into a specific account")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Deposit completed successfully"),
-            @APIResponse(responseCode = "400", description = "Invalid deposit amount"),
-            @APIResponse(responseCode = "404", description = "Account not found")
-    })
-    public Response deposit(@PathParam("accountNumber") String accountNumber, @Valid DepositRequest request) {
-        Account updatedAccount = accountService.deposit(accountNumber, request.amount());
+                AccountResponse response = mapToResponse(newAccount);
 
-        AccountResponse response = mapToResponse(updatedAccount);
+                URI createdUri = uriInfo.getAbsolutePathBuilder().path(newAccount.accountNumber).build();
+                return Response.created(createdUri).entity(response).build();
+        }
 
-        return Response.ok(response).build();
-    }
+        @POST
+        @Path("/{accountNumber}/deposit")
+        @Transactional
+        @Operation(summary = "Deposit funds", description = "Deposit money into a specific account")
+        @APIResponses({
+                        @APIResponse(responseCode = "200", description = "Deposit completed successfully"),
+                        @APIResponse(responseCode = "400", description = "Invalid deposit amount"),
+                        @APIResponse(responseCode = "404", description = "Account not found")
+        })
+        public Response deposit(@PathParam("accountNumber") String accountNumber, @Valid DepositRequest request) {
+                Account updatedAccount = accountService.deposit(accountNumber, request.amount());
 
-    @POST
-    @Path("/{accountNumber}/withdraw")
-    @Transactional
-    @Operation(summary = "Withdraw funds", description = "Withdraw money from a specific account")
-    @APIResponses({
-            @APIResponse(responseCode = "200", description = "Withdrawal completed successfully"),
-            @APIResponse(responseCode = "400", description = "Invalid withdrawal amount"),
-            @APIResponse(responseCode = "402", description = "Insufficient funds"),
-            @APIResponse(responseCode = "404", description = "Account not found")
-    })
-    public Response withdraw(@PathParam("accountNumber") String accountNumber,
-            @Valid WithdrawRequest request) {
-        Account updatedAccount = accountService.withdraw(accountNumber, request.amount());
+                AccountResponse response = mapToResponse(updatedAccount);
 
-        AccountResponse response = mapToResponse(updatedAccount);
+                return Response.ok(response).build();
+        }
 
-        return Response.ok(response).build();
-    }
+        @POST
+        @Path("/{accountNumber}/withdraw")
+        @Transactional
+        @Operation(summary = "Withdraw funds", description = "Withdraw money from a specific account")
+        @APIResponses({
+                        @APIResponse(responseCode = "200", description = "Withdrawal completed successfully"),
+                        @APIResponse(responseCode = "400", description = "Invalid withdrawal amount"),
+                        @APIResponse(responseCode = "402", description = "Insufficient funds"),
+                        @APIResponse(responseCode = "404", description = "Account not found")
+        })
+        public Response withdraw(@PathParam("accountNumber") String accountNumber,
+                        @Valid WithdrawRequest request) {
+                Account updatedAccount = accountService.withdraw(accountNumber, request.amount());
 
-    private AccountResponse mapToResponse(Account account) {
-        return new AccountResponse(
-                account.accountNumber,
-                account.firstName,
-                account.lastName,
-                account.balance);
-    }
+                AccountResponse response = mapToResponse(updatedAccount);
+
+                return Response.ok(response).build();
+        }
+
+        private AccountResponse mapToResponse(Account account) {
+                return new AccountResponse(
+                                account.accountNumber,
+                                account.firstName,
+                                account.lastName,
+                                account.balance);
+        }
 }

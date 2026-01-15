@@ -1,6 +1,8 @@
 package com.bank.service;
 
 import com.bank.model.Account;
+import com.bank.model.LedgerEntry;
+
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -27,6 +29,7 @@ public class DeadlockTest {
     @BeforeEach
     @Transactional
     public void setup() {
+        LedgerEntry.deleteAll();
         Account.deleteAll();
         accountA = createAccount("Alice", "Deadlock", new BigDecimal("1000.00"));
         accountB = createAccount("Bob", "Deadlock", new BigDecimal("1000.00"));
