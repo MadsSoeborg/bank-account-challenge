@@ -145,4 +145,39 @@ public class TransferResourceTest {
                 .statusCode(400)
                 .body("violations[0].message", is("Amount must be positive"));
     }
+
+    @Test
+    public void testIdempotentTransfer() {
+        BigDecimal transferAmount = new BigDecimal("10.00");
+        TransferRequest request = new TransferRequest(account1.accountNumber, account2.accountNumber, transferAmount);
+        String uniqueKey = java.util.UUID.randomUUID().toString();
+
+        // First Request
+        given()
+                .contentType(ContentType.JSON)
+                .header("Idempotency-Key", uniqueKey)
+                .body(request)
+                .when().post("/transfers")
+                .then()
+                .statusCode(200)
+                .body("message", is("Transfer successful"));
+
+        // Second Request (Same Key)
+        given()
+                .contentType(ContentType.JSON)
+                .header("Idempotency-Key", uniqueKey)
+                .body(request)
+                .when().post("/transfers")
+                .then()
+                .statusCode(200)
+                .header("X-Idempotent-Replay", "true");
+
+        BigDecimal expectedBalance1 = new BigDecimal("90.00");
+
+        given()
+                .when().get("/accounts/" + account1.accountNumber + "/balance")
+                .then()
+                .body("balance", comparesEqualTo(expectedBalance1));
+
+    }
 }

@@ -3,6 +3,7 @@ package com.bank.service;
 import com.bank.exception.AccountNotFoundException;
 import com.bank.exception.InsufficientFundsException;
 import com.bank.model.Account;
+import com.bank.model.IdempotencyRecord;
 import com.bank.model.LedgerEntry;
 import com.bank.model.TransactionType;
 
@@ -71,7 +72,16 @@ public class AccountService {
     }
 
     @Transactional
-    public void transfer(String fromAccountNumber, String toAccountNumber, BigDecimal amount) {
+    public boolean transfer(String idempotencyKey, String fromAccountNumber, String toAccountNumber,
+            BigDecimal amount) {
+
+        if (idempotencyKey != null) {
+            boolean exists = IdempotencyRecord.count("idempotencyKey", idempotencyKey) > 0;
+            if (exists) {
+                return false;
+            }
+        }
+
         if (fromAccountNumber.equals(toAccountNumber)) {
             throw new IllegalArgumentException("Cannot transfer money to the same account.");
         }
@@ -97,6 +107,12 @@ public class AccountService {
         LedgerEntry.create(source, amount.negate(), source.balance, TransactionType.TRANSFER_OUT, toAccountNumber)
                 .persist();
         LedgerEntry.create(target, amount, target.balance, TransactionType.TRANSFER_IN, fromAccountNumber).persist();
+
+        if (idempotencyKey != null) {
+            IdempotencyRecord.of(idempotencyKey, 200, "Transfer successful").persist();
+        }
+
+        return true;
     }
 
     private Account findAccountAndLock(String accountNumber) {
